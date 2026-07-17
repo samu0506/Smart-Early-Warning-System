@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Early Warning System - Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<style>
+    *{box-sizing:border-box;font-family:"Segoe UI",Tahoma,Geneva,Verdana,sans-serif}
+    body{margin:0;height:100vh;background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);display:flex;justify-content:center;align-items:center}
+
+    .login-card{background:#111;width:400px;padding:38px;border-radius:14px;box-shadow:0 0 35px rgba(0,0,0,.8);color:#fff}
+    h2{text-align:center;margin-bottom:25px;letter-spacing:1px}
+
+    .toggle{display:flex;margin-bottom:25px;border-radius:8px;overflow:hidden}
+    .toggle button{flex:1;padding:11px;border:none;cursor:pointer;font-weight:600;background:#1a1a1a;color:#aaa;transition:.25s}
+    .toggle button.active{background:#0d6efd;color:#fff}
+    .toggle button:hover{background:#0b5ed7;color:#fff}
+
+    input{width:100%;padding:12px;margin-bottom:15px;border-radius:6px;border:none;outline:none;background:#1e1e1e;color:#fff}
+    input::placeholder{color:#aaa}
+
+    .login-btn{width:100%;padding:12px;background:#0d6efd;border:none;border-radius:6px;color:#fff;font-size:15px;cursor:pointer;transition:.25s}
+    .login-btn:hover{background:#0b5ed7}
+
+    .error{background:#ff4d4d;padding:10px;border-radius:5px;margin-bottom:15px;text-align:center;font-size:14px}
+
+    .forgot-password{text-align:right;margin-top:-6px;margin-bottom:15px}
+    .forgot-password a{color:#4dabff;font-size:13px;text-decoration:none}
+    .forgot-password a:hover{text-decoration:underline}
+
+    .footer-text{text-align:center;font-size:12px;color:#aaa;margin-top:20px}
+</style>
+
+<script>
+    function switchLogin(type){
+        const student=document.getElementById('student-form');
+        const admin=document.getElementById('admin-form');
+        const sBtn=document.getElementById('student-btn');
+        const aBtn=document.getElementById('admin-btn');
+
+        if(type==='student'){
+            student.style.display='block';
+            admin.style.display='none';
+            sBtn.classList.add('active');
+            aBtn.classList.remove('active');
+        }else{
+            student.style.display='none';
+            admin.style.display='block';
+            aBtn.classList.add('active');
+            sBtn.classList.remove('active');
+        }
+    }
+    window.onload=function(){switchLogin('student');}
+</script>
+```
+
+</head>
+<body>
+
+<div class="login-card">
+    <h2>Smart Early Warning System</h2>
+
+```
+<div class="toggle">
+    <button type="button" id="student-btn" onclick="switchLogin('student')">Student</button>
+    <button type="button" id="admin-btn" onclick="switchLogin('admin')">Admin</button>
+</div>
+
+{% if error %}
+    <div class="error">{{ error }}</div>
+{% endif %}
+
+<!-- STUDENT LOGIN -->
+<form method="post" id="student-form">
+    {% csrf_token %}
+    <input type="hidden" name="login_type" value="student">
+
+    <input type="text" name="student_id" placeholder="Student ID" required>
+    <input type="password" name="password" placeholder="Password" required>
+
+    <div class="forgot-password">
+        <a href="{% url 'students:simple_forgot_password' %}">Forgot Password? (Use Roll No)</a>
+    </div>
+
+    <button class="login-btn">Student Login</button>
+</form>
+
+<!-- ADMIN LOGIN -->
+<form method="post" id="admin-form" style="display:none;">
+    {% csrf_token %}
+    <input type="hidden" name="login_type" value="admin">
+
+    <input type="text" name="username" placeholder="Admin Username" required>
+    <input type="password" name="password" placeholder="Password" required>
+
+    <button class="login-btn">Admin Login</button>
+</form>
+
+<div class="footer-text">© 2026 Smart Early Warning System</div>
+```
+
+</div>
+
+</body>
+</html>

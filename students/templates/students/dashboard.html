@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Student Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+body{
+    margin:0;
+    font-family:'Poppins',sans-serif;
+    background:#020617;
+    color:#e5e7eb;
+}
+.user-menu{position:fixed;top:20px;right:30px;z-index:9999}
+.avatar{
+    width:48px;height:48px;border-radius:50%;
+    background:#0ea5e9;display:flex;align-items:center;
+    justify-content:center;cursor:pointer;transition:.3s
+}
+.avatar:hover{background:#0284c7;transform:scale(1.08)}
+.avatar i{color:white;font-size:20px}
+.dropdown{
+    position:absolute;top:60px;right:0;background:#0f172a;
+    border-radius:10px;display:none;flex-direction:column;
+    min-width:170px;box-shadow:0 10px 30px rgba(0,0,0,.6);
+    overflow:hidden
+}
+.dropdown a{padding:12px;color:#e5e7eb;text-decoration:none;display:block;transition:.2s}
+.dropdown a:hover{background:#1e293b}
+.container{max-width:1300px;margin:auto;padding:40px 20px}
+.header{text-align:center;margin-bottom:50px}
+.header h1{font-size:42px;margin-bottom:10px}
+.header p{font-size:18px;color:#94a3b8}
+.export-btn{
+    display:inline-block;margin-top:20px;padding:12px 24px;
+    background:#38bdf8;color:#020617;font-weight:600;
+    border-radius:10px;text-decoration:none;transition:.3s
+}
+.export-btn:hover{background:#0ea5e9;transform:translateY(-2px)}
+.grid{display:flex;flex-direction:column;gap:30px}
+.card{
+    background:#0f172a;border-radius:20px;padding:30px;
+    box-shadow:0 15px 40px rgba(0,0,0,.6);transition:.3s
+}
+.card:hover{transform:translateY(-6px);box-shadow:0 20px 50px rgba(0,0,0,.8)}
+.card h2{font-size:22px;color:#38bdf8;margin-bottom:20px}
+.big-value{font-size:42px;font-weight:700}
+.risk-high{color:#ef4444;font-size:36px;font-weight:700}
+.risk-medium{color:#f59e0b;font-size:36px;font-weight:700}
+.risk-low{color:#22c55e;font-size:36px;font-weight:700}
+.alert-box{border-left:6px solid #ef4444;background:rgba(239,68,68,0.08)}
+.risk-section{margin-top:20px;font-size:15px;color:#cbd5f5}
+canvas{max-height:300px}
+footer{text-align:center;margin-top:60px;color:#64748b;font-size:14px}
+</style>
+</head>
+
+<body>
+
+<div class="user-menu">
+    <div class="avatar" onclick="toggleMenu(event)">
+        <i class="fa-solid fa-user"></i>
+    </div>
+    <div id="dropdown" class="dropdown">
+        <a>👤 {{ student.full_name }}</a>
+        <a href="#">Profile</a>
+        <a href="{% url 'students:logout' %}">Logout</a>
+    </div>
+</div>
+
+<div class="container">
+<div class="header">
+    <h1>Student Performance Dashboard</h1>
+    <p>Smart Early Warning System</p>
+
+    <a href="{% url 'students:export_pdf' student.student_id %}" class="export-btn">
+        <i class="fa-solid fa-file-arrow-down"></i> Export as PDF
+    </a>
+</div>
+
+<div class="grid">
+
+<div class="card">
+    <h2>Student Information</h2>
+    <p><b>Name:</b> {{ student.full_name }}</p>
+    <p><b>ID:</b> {{ student.student_id }}</p>
+    <p><b>Department:</b> {{ student.department }}</p>
+    <p><b>Year:</b> {{ student.year }}</p>
+    <p><b>Section:</b> {{ student.section }}</p>
+</div>
+
+<div class="card">
+    <h2>Overall Attendance</h2>
+    <div class="big-value">{{ attendance|default:0 }}%</div>
+    <canvas id="attendanceChart"></canvas>
+</div>
+
+<div class="card">
+    <h2>Subject-wise Performance</h2>
+    {% if subjects %}
+        <canvas id="marksChart"></canvas>
+    {% else %}
+        <p>No subject marks data available.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h2>Subject Comparison Radar</h2>
+    <canvas id="radarChart"></canvas>
+</div>
+
+<!-- NEW: Performance Comparison -->
+<div class="card">
+    <h2>Performance vs Class Average</h2>
+    <canvas id="comparisonChart"></canvas>
+</div>
+
+<!-- NEW: Weakest Subject -->
+<div class="card" style="border-left:6px solid #ef4444;background:rgba(239,68,68,0.08)">
+    <h2>Weakest Subject</h2>
+    {% if weakest_subject %}
+        <p><b>{{ weakest_subject.name }}</b> - {{ weakest_subject.percentage }}%</p>
+    {% else %}
+        <p>No data available.</p>
+    {% endif %}
+</div>
+
+<!-- NEW: Suggestions -->
+<div class="card" style="border-left:6px solid #22c55e;background:rgba(34,197,94,0.08)">
+    <h2>Improvement Suggestions</h2>
+    <ul>
+        {% if attendance < 75 %}
+            <li>Increase attendance to at least 75%.</li>
+        {% endif %}
+        {% if weakest_subject and weakest_subject.percentage < 50 %}
+            <li>Focus more on {{ weakest_subject.name }}.</li>
+        {% endif %}
+        <li>Revise weekly and attend doubt-solving sessions.</li>
+    </ul>
+</div>
+
+<div class="card {% if risk_level != 'LOW' %}alert-box{% endif %}">
+    <h2>Risk Assessment</h2>
+
+    {% if risk_level == 'HIGH' %}
+        <div class="risk-high">HIGH RISK</div>
+    {% elif risk_level == 'MEDIUM' %}
+        <div class="risk-medium">MEDIUM RISK</div>
+    {% else %}
+        <div class="risk-low">LOW RISK</div>
+    {% endif %}
+
+    <div class="risk-section">
+        <b>Auto-Generated Remarks:</b>
+        <ul>
+            {% for r in remarks %}
+                <li>{{ r }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+</div>
+<footer>© 2026 Smart Early Warning System</footer>
+</div>
+
+<script>
+function toggleMenu(e){
+    e.stopPropagation();
+    const m=document.getElementById('dropdown');
+    m.style.display=m.style.display==='flex'?'none':'flex'
+}
+document.addEventListener('click',()=>{document.getElementById('dropdown').style.display='none'});
+
+/* Attendance Doughnut */
+new Chart(document.getElementById('attendanceChart'),{
+type:'doughnut',
+data:{
+labels:['Present','Absent'],
+datasets:[{
+data:[{{ attendance|default:0 }},{{ remaining|default:0 }}],
+backgroundColor:['#22c55e','#ef4444'],
+borderWidth:0
+}]
+}
+});
+
+/* Marks Line */
+{% if subjects %}
+new Chart(document.getElementById('marksChart'),{
+type:'line',
+data:{
+labels:[{% for s in subjects %}'{{ s.name }}',{% endfor %}],
+datasets:[{
+label:'Marks (%)',
+data:[{% for s in subjects %}{{ s.percentage }},{% endfor %}],
+borderWidth:3,
+tension:.4,
+fill:true,
+backgroundColor:'rgba(56,189,248,0.15)'
+}]
+}
+});
+{% endif %}
+
+/* Radar */
+new Chart(document.getElementById("radarChart"),{
+type:"radar",
+data:{
+labels: {{ chart_labels|default:"[]"|safe }},
+datasets:[{
+label:"Performance %",
+data: {{ chart_data|default:"[]"|safe }},
+backgroundColor:"rgba(56,189,248,0.3)",
+borderColor:"#38bdf8"
+}]
+},
+options:{scales:{r:{min:0,max:100}}}
+});
+
+/* Comparison Bar */
+new Chart(document.getElementById("comparisonChart"),{
+type:"bar",
+data:{
+labels: {{ chart_labels|default:"[]"|safe }},
+datasets:[
+{
+label:"Student",
+data: {{ chart_data|default:"[]"|safe }},
+backgroundColor:"#38bdf8"
+},
+{
+label:"Class Average",
+data: {{ class_avg_data|default:"[]"|safe }},
+backgroundColor:"#f59e0b"
+}
+]
+},
+options:{scales:{y:{beginAtZero:true,max:100}}}
+});
+</script>
+
+</body>
+</html>

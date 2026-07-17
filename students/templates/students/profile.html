@@ -1,0 +1,10 @@
+{% extends "students/base_dashboard.html" %}
+
+{% block content %}
+
+<h2>My Profile</h2>
+
+<p><b>Username:</b> {{ request.user.username }}</p>
+<p><b>Email:</b> {{ request.user.email }}</p>
+
+{% endblock %}
